@@ -1,0 +1,13 @@
+# .streamlit/config.toml
+
+[theme]
+# Cor Primária (Botões e Links) - Um Azul Vibrante
+primaryColor="#0066ff" 
+# Cor de Fundo da Aplicação (Azul Escuro/Quase Preto)
+backgroundColor="#0d1f40" 
+# Cor de Fundo dos Containers/Sidebar (Um Azul Escuro Um Pouco Mais Claro)
+secondaryBackgroundColor="#18325a"
+# Cor do Texto (Branco para contraste)
+textColor="#ffffff"
+# Fonte Padrão
+font="sans serif"
