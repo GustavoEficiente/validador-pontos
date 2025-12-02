@@ -1,21 +1,65 @@
 import streamlit as st
 import pandas as pd
 import io
+import os
+import base64
 
 # --- CONFIGURAÇÃO DA PÁGINA (INTERFACE) ---
 st.set_page_config(
-    page_title="Validador de Relatórios", 
-    page_icon="⚡", 
+    page_title="Validador de Relatórios",
+    page_icon="⚡",
     layout="centered"
 )
 
-# -------- LOGO NO CANTO SUPERIOR ESQUERDO --------
-col1, col2 = st.columns([1, 5])
+# -------- TENTATIVA: LOGO FIXA NO CANTO SUPERIOR ESQUERDO --------
+# Estratégia principal: embutir a imagem como data URI (base64).
+logo_path = "logo.png"  # certifique-se que este arquivo está no mesmo diretório e commitado no repositório
 
-with col1:
-    st.image("logo.png", width=100)
+def show_logo_left(logo_path, width=100):
+    if not os.path.exists(logo_path):
+        st.session_state.setdefault("_logo_error", f"Arquivo não encontrado: {logo_path}")
+        return
 
-# CSS para deixar o botão mais bonito (opcional)
+    try:
+        with open(logo_path, "rb") as f:
+            data = f.read()
+        b64 = base64.b64encode(data).decode()
+        # CSS para posicionar fixo no canto superior esquerdo
+        html = f"""
+        <style>
+        .logo-fixed-left {{
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 9999;
+        }}
+        /* Evita que a logo cubra conteúdo em telas pequenas */
+        @media (max-width: 500px) {{
+            .logo-fixed-left img {{ width: {int(width*0.7)}px !important; }}
+        }}
+        </style>
+        <div class="logo-fixed-left">
+            <img src="data:image/png;base64,{b64}" width="{width}" style="border-radius:6px;"/>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
+    except Exception as e:
+        # fallback: tenta usar st.image (funciona localmente)
+        try:
+            st.image(logo_path, width=width)
+            # adiciona pequena margem para não sobrepor o título
+            st.markdown("<br/>", unsafe_allow_html=True)
+        except Exception as e2:
+            st.session_state.setdefault("_logo_error", f"Falha ao carregar logo: {e2}")
+
+# chama a função que tenta mostrar a logo
+show_logo_left(logo_path, width=100)
+
+# se houve erro, mostra aviso discreto (não trava o app)
+if "_logo_error" in st.session_state:
+    st.warning(st.session_state["_logo_error"])
+
+# --- CSS para deixar o botão mais bonito (opcional) ---
 st.markdown("""
 <style>
     div.stButton > button:first-child {
@@ -28,14 +72,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- TÍTULO ---
-st.title("COMPARATIVO EFICIENTE")
-st.markdown("### Processamento Automático de Relatórios")
-st.info("Faça upload do arquivo `RELATORIO.csv` para aplicar as regras de negócio automaticamente.")
+# --- TÍTULO / INFORMAÇÕES PRINCIPAIS ---
+# acrescento um pequeno espaçamento horizontal via columns para o layout ficar alinhado com a logo
+col_space_left, col_main = st.columns([0.12, 1])
+with col_main:
+    st.title("COMPARATIVO EFICIENTE")
+    st.markdown("### Processamento Automático de Relatórios")
+    st.info("Faça upload do arquivo `RELATORIO.csv` para aplicar as regras de negócio automaticamente.")
 
 # --- 1. UPLOAD DO ARQUIVO ---
 uploaded_file = st.file_uploader(
-    "Arraste seu arquivo CSV aqui", 
+    "Arraste seu arquivo CSV aqui",
     type=["csv"]
 )
 
@@ -43,17 +90,17 @@ if uploaded_file is not None:
     try:
         # Lê o arquivo CSV enviado pelo usuário
         df = pd.read_csv(
-            uploaded_file, 
-            sep=";", 
-            dtype=str, 
+            uploaded_file,
+            sep=";",
+            dtype=str,
             encoding="latin1"
         ).fillna("")
-        
+
         st.write("---")
         st.write("🔍 **Arquivo carregado! Processando regras...**")
 
         # --- INÍCIO DA SUA LÓGICA DE NEGÓCIO ---
-        
+
         # Normaliza nomes de colunas
         df.columns = [c.strip() for c in df.columns]
 
@@ -131,7 +178,7 @@ if uploaded_file is not None:
             .str.replace(r"\s*;\s*", "; ", regex=True)
             .str.strip()
         )
-        
+
         # --- FIM DA LÓGICA ---
 
         # Mostra uma prévia das linhas com observação
@@ -141,8 +188,8 @@ if uploaded_file is not None:
 
         # --- DOWNLOAD DO RESULTADO ---
         csv_buffer = df.to_csv(
-            sep=";", 
-            index=False, 
+            sep=";",
+            index=False,
             encoding="latin1"
         )
 
