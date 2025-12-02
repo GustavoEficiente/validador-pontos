@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#0A1F44"         # Azul escuro principal
+backgroundColor = "#0E1626"      # Fundo do site (azul quase preto)
+secondaryBackgroundColor = "#172A45"
+textColor = "#FFFFFF"            # Texto branco
+font = "sans serif"
