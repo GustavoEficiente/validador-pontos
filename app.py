@@ -3,7 +3,17 @@ import pandas as pd
 import io
 
 # --- CONFIGURAÇÃO DA PÁGINA (INTERFACE) ---
-st.set_page_config(page_title="Validador de Relatórios", page_icon="⚡", layout="centered")
+st.set_page_config(
+    page_title="Validador de Relatórios", 
+    page_icon="⚡", 
+    layout="centered"
+)
+
+# -------- LOGO NO CANTO SUPERIOR ESQUERDO --------
+col1, col2 = st.columns([1, 5])
+
+with col1:
+    st.image("logo.png", width=100)
 
 # CSS para deixar o botão mais bonito (opcional)
 st.markdown("""
@@ -18,18 +28,26 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- TÍTULO ---
 st.title("COMPARATIVO EFICIENTE")
 st.markdown("### Processamento Automático de Relatórios")
 st.info("Faça upload do arquivo `RELATORIO.csv` para aplicar as regras de negócio automaticamente.")
 
 # --- 1. UPLOAD DO ARQUIVO ---
-uploaded_file = st.file_uploader("Arraste seu arquivo CSV aqui", type=["csv"])
+uploaded_file = st.file_uploader(
+    "Arraste seu arquivo CSV aqui", 
+    type=["csv"]
+)
 
 if uploaded_file is not None:
     try:
         # Lê o arquivo CSV enviado pelo usuário
-        # Mantendo seu encoding latin1 e separador ;
-        df = pd.read_csv(uploaded_file, sep=";", dtype=str, encoding="latin1").fillna("")
+        df = pd.read_csv(
+            uploaded_file, 
+            sep=";", 
+            dtype=str, 
+            encoding="latin1"
+        ).fillna("")
         
         st.write("---")
         st.write("🔍 **Arquivo carregado! Processando regras...**")
@@ -116,15 +134,18 @@ if uploaded_file is not None:
         
         # --- FIM DA LÓGICA ---
 
-        # Mostra uma prévia das linhas que tiveram alguma observação
+        # Mostra uma prévia das linhas com observação
         st.success("✅ Processamento concluído!")
         st.subheader("Prévia dos itens com observações:")
         st.dataframe(df[df['resultado'] != ""].head())
 
-        # --- 2. DOWNLOAD DO RESULTADO ---
-        # Converte o DF para CSV na memória (sem salvar no disco)
-        csv_buffer = df.to_csv(sep=";", index=False, encoding="latin1")
-        
+        # --- DOWNLOAD DO RESULTADO ---
+        csv_buffer = df.to_csv(
+            sep=";", 
+            index=False, 
+            encoding="latin1"
+        )
+
         st.download_button(
             label="📥 BAIXAR RELATÓRIO CORRIGIDO",
             data=csv_buffer,
@@ -133,4 +154,5 @@ if uploaded_file is not None:
         )
 
     except Exception as e:
-        st.error(f"Erro ao processar o arquivo. Verifique se é um CSV separado por ponto e vírgula (;). Detalhe: {e}")
+        st.error(f"❌ Erro ao processar o arquivo: {e}")
+
