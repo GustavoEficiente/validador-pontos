@@ -18,7 +18,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("⚡ Sistema de Validação de Pontos")
+st.title("COMPARATIVO EFICIENTE")
 st.markdown("### Processamento Automático de Relatórios")
 st.info("Faça upload do arquivo `RELATORIO.csv` para aplicar as regras de negócio automaticamente.")
 
