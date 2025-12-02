@@ -25,13 +25,26 @@ if os.path.exists(logo_path):
         <style>
             .logo-container {{
                 position: fixed;
-                top: 25px;
+                top: 70px;   /* ↓ DESCEU A LOGO */
                 left: 40px;
                 z-index: 999;
             }}
 
             .logo-container img {{
                 width: 160px;
+            }}
+
+            .center-content {{
+                text-align: center;
+            }}
+
+            .box-upload {{
+                max-width: 600px;
+                margin: 0 auto 30px auto;
+                background-color: #162033;
+                padding: 20px;
+                border-radius: 10px;
+                text-align: center;
             }}
         </style>
 
@@ -47,29 +60,33 @@ else:
 # =====================================
 # AFASTAR CONTEÚDO DA LOGO
 # =====================================
-st.markdown("<div style='margin-top:100px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top:120px;'></div>", unsafe_allow_html=True)
 
 # =====================================
-# CONTEÚDO DO SITE
+# CONTEÚDO CENTRALIZADO
 # =====================================
+
+st.markdown('<div class="center-content">', unsafe_allow_html=True)
 
 st.title("COMPARATIVO EFICIENTE")
 st.subheader("Processamento Automático de Relatórios")
 
 st.markdown(
     """
-    <div style="max-width:600px; margin-bottom:30px; background-color:#162033; padding:20px; border-radius:10px;">
+    <div class="box-upload">
         Faça upload do arquivo <b>RELATORIO.csv</b> para aplicar as regras de negócio automaticamente.
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# Upload
+# Upload também centralizado
 uploaded_file = st.file_uploader(
     "Arraste seu arquivo CSV aqui",
     type=["csv"]
 )
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 if uploaded_file is not None:
     st.success("✅ Arquivo carregado com sucesso!")
