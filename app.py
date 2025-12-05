@@ -55,7 +55,7 @@ if uploaded_file_1 is not None:
 
 
 # =====================================================================
-# MODELO 2 – CONVERSÃO DE BASE
+# MODELO 2 – PADRONIZAÇÃO DE BASE
 # =====================================================================
 
 st.markdown("---")
@@ -86,15 +86,16 @@ if uploaded_file_2 is not None:
         df2 = df2.applymap(remover_acentos)
 
         # =====================================
-        # 3) COLUNA Q – PADRONIZAÇÃO DAS LÂMPADAS
+        # 3) COLUNA Q – PADRONIZAÇÃO DAS LÂMPADAS (VERSÃO FORTE)
         # =====================================
         if "Q" in df2.columns:
-            df2["Q"] = df2["Q"].replace({
-                "LAMPADA LED": "LD",
-                "LAMPADA VAPOR DE SODIO": "VS",
-                "LAMPADA METALICA": "ME",
-                "LAMPADA FLUORESCENTES": "FLC"
-            })
+
+            df2["Q"] = df2["Q"].astype(str).str.strip()
+
+            df2.loc[df2["Q"].str.contains("LED", na=False), "Q"] = "LD"
+            df2.loc[df2["Q"].str.contains("VAPOR", na=False), "Q"] = "VS"
+            df2.loc[df2["Q"].str.contains("METAL", na=False), "Q"] = "ME"
+            df2.loc[df2["Q"].str.contains("FLUOR", na=False), "Q"] = "FLC"
 
         # =====================================
         # 4) REGRA: COLUNA O -> N
@@ -102,32 +103,6 @@ if uploaded_file_2 is not None:
         if "O" in df2.columns and "N" in df2.columns:
             df2.loc[df2["O"] == "AGUARDANDO MEDICAO", "N"] = "NAO"
 
-        # =====================================
-        # EXIBIR PRÉVIA
-        # =====================================
-        st.success("✅ Tratamento finalizado com sucesso!")
-
-        st.subheader("🔍 Prévia do arquivo tratado:")
-        st.dataframe(df2.head(50))
-
-        # =====================================
-        # DOWNLOAD
-        # =====================================
-        csv_buffer_2 = df2.to_csv(sep=";", index=False, encoding="latin1")
-
-        st.download_button(
-            label="📥 Baixar Modelo 2 tratado",
-            data=csv_buffer_2,
-            file_name="BASE_MODELO_2_TRATADA.csv",
-            mime="text/csv",
-            key="download2"
-        )
-
-    except Exception as e:
-        st.error(f"Erro ao processar a segunda base: {e}")
-
-
-st.markdown("---")
-st.caption("Sistema desenvolvido para a empresa EFICIENTE ⚡ Trabalhando de forma eficiente")
+        # ============================
 
 
