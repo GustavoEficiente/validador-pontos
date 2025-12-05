@@ -1,90 +1,192 @@
+import streamlit as st
 import pandas as pd
+import os
+import base64
 
-def processar_planilha(caminho_arquivo):
-    print("\n✅ Arquivo carregado. Iniciando tratamento...\n")
+# =====================================
+# CONFIGURAÇÃO DA PÁGINA
+# =====================================
+st.set_page_config(
+    page_title="Validador de Relatórios",
+    page_icon="⚡",
+    layout="centered"
+)
 
-    df = pd.read_excel(caminho_arquivo)
+# =====================================
+# CARREGAR LOGO NO TOPO ESQUERDO (UM POUCO MAIS ABAIXO)
+# =====================================
+logo_path = "logo.png"
 
-    # Conferir se existem colunas suficientes
-    if df.shape[1] < 17:
-        print("❌ ERRO: A planilha não possui colunas suficientes (deve ter pelo menos até a coluna Q).")
-        return
+if os.path.exists(logo_path):
+    with open(logo_path, "rb") as image_file:
+        encoded_logo = base64.b64encode(image_file.read()).decode()
 
-    # Colunas por posição (A=0, B=1, C=2...)
-    col_medicao = df.columns[13]      # N
-    col_medidor_nc = df.columns[14]   # O
-    col_tipo_lampada = df.columns[16] # Q
+    st.markdown(
+        f"""
+        <style>
+            .logo-container {{
+                position: fixed;
+                top: 70px;   /* ↓ AQUI CONTROLA QUANTO DESCE */
+                left: 25px;
+                z-index: 9999;
+            }}
 
-    print("✅ Colunas identificadas:")
-    print(f"Coluna N (medicao): {col_medicao}")
-    print(f"Coluna O (medidor_nc): {col_medidor_nc}")
-    print(f"Coluna Q (tipo_lampada): {col_tipo_lampada}\n")
+            .logo-container img {{
+                width: 160px;
+            }}
 
-    resultados = []
+            .titulo {{
+                text-align: center;
+                font-size: 34px;
+                font-weight: bold;
+            }}
 
-    for index, row in df.iterrows():
+            .subtitulo {{
+                text-align: center;
+                font-size: 18px;
+            }}
 
-        medicao = row[col_medicao]
-        medidor_nc = row[col_medidor_nc]
-        tipo_lampada = row[col_tipo_lampada]
+            div.stButton > button:first-child {{
+                background-color: #003366;
+                color: white;
+                font-size: 18px;
+                border-radius: 10px;
+                width: 100%;
+            }}
+        </style>
 
-        status = "OK"
-        observacao = "Sem irregularidade"
+        <div class="logo-container">
+            <img src="data:image/png;base64,{encoded_logo}">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+else:
+    st.warning("⚠️ arquivo logo.png não encontrado")
 
-        # REGRA 1 - Medição vazia
-        if pd.isna(medicao):
-            status = "ERRO"
-            observacao = "Medição não informada"
+# Espaço para não conflitar com a logo
+st.markdown("<div style='margin-top:120px;'></div>", unsafe_allow_html=True)
 
-        # REGRA 2 - Medidor NC vazio
-        elif pd.isna(medidor_nc):
-            status = "ERRO"
-            observacao = "Medidor NC não informado"
+# =====================================
+# TÍTULOS CENTRALIZADOS
+# =====================================
+st.markdown("<div class='titulo'>COMPARATIVO EFICIENTE</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitulo'>Processamento Automático de Relatório</div>", unsafe_allow_html=True)
 
-        # REGRA 3 - Tipo de lâmpada vazio
-        elif pd.isna(tipo_lampada):
-            status = "ERRO"
-            observacao = "Tipo da lâmpada não informado"
+st.info("Faça upload do arquivo `RELATORIO.csv` para aplicar as regras de negócio automaticamente.")
 
-        # REGRA 4 - Medição não numérica
-        elif not str(medicao).replace('.', '').isdigit():
-            status = "ERRO"
-            observacao = "Medição inválida (não é numérica)"
+# =====================================
+# UPLOAD DO ARQUIVO
+# =====================================
+uploaded_file = st.file_uploader("Arraste seu arquivo CSV aqui", type=["csv"])
 
-        # REGRA 5 - Medição muito baixa (exemplo)
-        elif float(medicao) < 10:
-            status = "ALERTA"
-            observacao = "Medição abaixo do esperado"
+if uploaded_file is not None:
+    try:
+        df = pd.read_csv(uploaded_file, sep=";", dtype=str, encoding="latin1").fillna("")
 
-        # Se passou em tudo
-        else:
-            status = "OK"
-            observacao = "Conforme"
+        st.write("---")
+        st.write("🔍 **Arquivo carregado! Processando regras...**")
 
-        resultados.append({
-            "linha_planilha": index + 2,
-            "medicao (N)": medicao,
-            "medidor_nc (O)": medidor_nc,
-            "tipo_lampada (Q)": tipo_lampada,
-            "status": status,
-            "observacao": observacao
-        })
+        # Normaliza nomes das colunas
+        df.columns = [c.strip() for c in df.columns]
 
-    resultado_df = pd.DataFrame(resultados)
+        # Garante colunas necessárias
+        expected_cols = [
+            "id_ponto","posicao","medicao","tipo_lampada","potencia",
+            "tipo_luminaria","tipo_rede","plaqueta",
+            "id_ponto_2","posicao_2","medicao_2","tipo_lampada_2",
+            "potencia_2","tipo_luminaria_2","tipo_rede_2","plaqueta_2"
+        ]
 
-    # Salvar arquivo final
-    saida = "resultado_tratado.xlsx"
-    resultado_df.to_excel(saida, index=False)
+        for c in expected_cols:
+            if c not in df.columns:
+                df[c] = ""
 
-    print("✅ Tratamento finalizado com sucesso!")
-    print(f"📁 Arquivo gerado: {saida}")
+        # Converte potência para número
+        for col in ["potencia", "potencia_2"]:
+            df[col] = (
+                df[col]
+                .astype(str)
+                .str.replace(",", ".", regex=False)
+                .str.strip()
+                .replace("", "0")
+            )
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
+        # Normaliza texto
+        text_cols = [
+            "tipo_lampada","tipo_lampada_2","medicao","medicao_2",
+            "tipo_rede","tipo_rede_2","plaqueta","id_ponto","id_ponto_2"
+        ]
 
-# ========================
-# EXECUÇÃO
-# ========================
+        for c in text_cols:
+            df[c] = df[c].astype(str).str.strip()
 
-caminho = input("Cole aqui o caminho do arquivo Excel: ")
-processar_planilha(caminho)
+        # Inicia coluna resultado
+        df["resultado"] = ""
 
+        # REGRA 1 – REDUÇÃO DE POTÊNCIA
+        mask_reducao = (
+            df["tipo_lampada"].str.upper() == df["tipo_lampada_2"].str.upper()
+        ) & (df["potencia"] < df["potencia_2"])
+
+        df.loc[mask_reducao, "resultado"] += "REDUÇÃO DE POTENCIA; "
+
+        # REGRA 2 – POSSÍVEL MUDANÇA DE MEDIÇÃO
+        mask_medicao = (
+            df["medicao_2"].str.upper().str.contains("SIM", na=False)
+        ) & (
+            df["medicao"].str.upper().str.contains("NÃO|NAO", na=False)
+        )
+
+        df.loc[mask_medicao, "resultado"] += "POSSIVEL MUDANÇA DE MEDIÇÃO; "
+
+        # REGRA 3 – POSSÍVEL DUPLICIDADE
+        contagem = df.groupby("id_ponto_2")["id_ponto"].transform("nunique")
+        mask_dup = (contagem > 1) & (df["id_ponto_2"].str.strip() != "")
+
+        df.loc[mask_dup, "resultado"] += "POSSIVEL DUPLICIDADE; "
+
+        # REGRA 4 – MUDANÇA DE REDE
+        mask_rede = (
+            (df["tipo_rede"].str.upper() != df["tipo_rede_2"].str.upper())
+        ) & (df["tipo_rede_2"].str.strip() != "")
+
+        df.loc[mask_rede, "resultado"] += "MUDANÇA DE REDE; "
+
+        # REGRA 5 – PONTO NOVO
+        mask_novo = df["id_ponto_2"].str.strip() == ""
+        df.loc[mask_novo, "resultado"] += "PONTO NOVO; "
+
+        # REGRA 6 – PLAQUETA DUPLICADA
+        plaquetas = df.groupby("plaqueta")["id_ponto"].transform("nunique")
+        mask_plaq = (df["plaqueta"].str.strip() != "") & (plaquetas > 1)
+
+        df.loc[mask_plaq, "resultado"] += "PLAQUETA DUPLICADA; "
+
+        # Limpa resultado
+        df["resultado"] = (
+            df["resultado"]
+            .str.replace(r"\s*;\s*$", "", regex=True)
+            .str.replace(r"\s*;\s*", "; ", regex=True)
+            .str.strip()
+        )
+
+        # Exibe prévia
+        st.success("✅ Processamento concluído!")
+        st.subheader("Prévia dos itens com observações:")
+        st.dataframe(df[df['resultado'] != ""].head())
+
+        # Download
+        csv_buffer = df.to_csv(sep=";", index=False, encoding="latin1")
+
+        st.download_button(
+            label="📥 BAIXAR RELATÓRIO CORRIGIDO",
+            data=csv_buffer,
+            file_name="RELATORIO_CORRIGIDO.csv",
+            mime="text/csv"
+        )
+
+    except Exception as e:
+        st.error(f"Erro ao processar o arquivo: {e}")
 
