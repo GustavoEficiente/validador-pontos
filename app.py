@@ -1,141 +1,90 @@
-import streamlit as st
 import pandas as pd
-import unicodedata
 
-st.set_page_config(page_title="Sistema de Processamento - Eficiente", layout="wide")
-st.title("🔌 SISTEMA DE PROCESSAMENTO – EFICIENTE")
+def processar_planilha(caminho_arquivo):
+    print("\n✅ Arquivo carregado. Iniciando tratamento...\n")
 
-# ---------------------------------------
-# FUNÇÃO: REMOVER ACENTOS
-# ---------------------------------------
-def remover_acentos(texto):
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', str(texto))
-        if unicodedata.category(c) != 'Mn'
-    )
+    df = pd.read_excel(caminho_arquivo)
 
+    # Conferir se existem colunas suficientes
+    if df.shape[1] < 17:
+        print("❌ ERRO: A planilha não possui colunas suficientes (deve ter pelo menos até a coluna Q).")
+        return
 
-# =====================================================================
-# MODELO 1 – RELATÓRIO COMPARATIVO
-# =====================================================================
+    # Colunas por posição (A=0, B=1, C=2...)
+    col_medicao = df.columns[13]      # N
+    col_medidor_nc = df.columns[14]   # O
+    col_tipo_lampada = df.columns[16] # Q
 
-st.markdown("---")
-st.header("📘 MODELO 1 – RELATÓRIO COMPARATIVO")
+    print("✅ Colunas identificadas:")
+    print(f"Coluna N (medicao): {col_medicao}")
+    print(f"Coluna O (medidor_nc): {col_medidor_nc}")
+    print(f"Coluna Q (tipo_lampada): {col_tipo_lampada}\n")
 
-st.info("Faça upload da base CSV para análise (Modelo 1).")
+    resultados = []
 
-uploaded_file_1 = st.file_uploader(
-    "Arraste aqui o arquivo RELATORIO.csv (Modelo 1)",
-    type=["csv"],
-    key="base1"
-)
+    for index, row in df.iterrows():
 
-if uploaded_file_1 is not None:
-    try:
-        df1 = pd.read_csv(uploaded_file_1, sep=";", dtype=str, encoding="latin1").fillna("")
+        medicao = row[col_medicao]
+        medidor_nc = row[col_medidor_nc]
+        tipo_lampada = row[col_tipo_lampada]
 
-        st.success("✅ Arquivo carregado com sucesso!")
+        status = "OK"
+        observacao = "Sem irregularidade"
 
-        st.subheader("🔎 Prévia dos dados:")
-        st.dataframe(df1.head(50))
+        # REGRA 1 - Medição vazia
+        if pd.isna(medicao):
+            status = "ERRO"
+            observacao = "Medição não informada"
 
-        csv_buffer_1 = df1.to_csv(sep=";", index=False, encoding="latin1")
+        # REGRA 2 - Medidor NC vazio
+        elif pd.isna(medidor_nc):
+            status = "ERRO"
+            observacao = "Medidor NC não informado"
 
-        st.download_button(
-            label="📥 Baixar Arquivo Modelo 1",
-            data=csv_buffer_1,
-            file_name="BASE_MODELO_1_PROCESSADA.csv",
-            mime="text/csv",
-            key="download1"
-        )
+        # REGRA 3 - Tipo de lâmpada vazio
+        elif pd.isna(tipo_lampada):
+            status = "ERRO"
+            observacao = "Tipo da lâmpada não informado"
 
-    except Exception as e:
-        st.error(f"Erro ao processar a base 1: {e}")
+        # REGRA 4 - Medição não numérica
+        elif not str(medicao).replace('.', '').isdigit():
+            status = "ERRO"
+            observacao = "Medição inválida (não é numérica)"
 
+        # REGRA 5 - Medição muito baixa (exemplo)
+        elif float(medicao) < 10:
+            status = "ALERTA"
+            observacao = "Medição abaixo do esperado"
 
-# =====================================================================
-# MODELO 2 – PADRONIZAÇÃO DE BASE
-# =====================================================================
-
-st.markdown("---")
-st.header("📙 MODELO 2 – PADRONIZAÇÃO DE BASE")
-
-st.info("Coluna Q ➜ tipo_lampada | Coluna O ➜ medidor_nc | Coluna N ➜ medicao")
-
-uploaded_file_2 = st.file_uploader(
-    "Arraste aqui o arquivo do Modelo 2 (Padronização)",
-    type=["csv"],
-    key="base2"
-)
-
-if uploaded_file_2 is not None:
-    try:
-        df2 = pd.read_csv(uploaded_file_2, sep=";", dtype=str, encoding="latin1").fillna("")
-
-        st.success("✅ Arquivo carregado. Iniciando tratamento...")
-
-        # =====================================
-        # 1) COLOCAR TUDO EM MAIÚSCULO
-        # =====================================
-        df2 = df2.applymap(lambda x: str(x).upper().strip())
-
-        # =====================================
-        # 2) REMOVER ACENTOS
-        # =====================================
-        df2 = df2.applymap(remover_acentos)
-
-        # =====================================
-        # 3) PADRONIZAÇÃO DA COLUNA tipo_lampada
-        # =====================================
-        if "TIPO_LAMPADA" in df2.columns:
-
-            df2["TIPO_LAMPADA"] = df2["TIPO_LAMPADA"].astype(str).str.strip()
-
-            df2.loc[df2["TIPO_LAMPADA"].str.contains("LED", na=False), "TIPO_LAMPADA"] = "LD"
-            df2.loc[df2["TIPO_LAMPADA"].str.contains("VAPOR", na=False), "TIPO_LAMPADA"] = "VS"
-            df2.loc[df2["TIPO_LAMPADA"].str.contains("SODIO", na=False), "TIPO_LAMPADA"] = "VS"
-            df2.loc[df2["TIPO_LAMPADA"].str.contains("METAL", na=False), "TIPO_LAMPADA"] = "ME"
-            df2.loc[df2["TIPO_LAMPADA"].str.contains("FLUOR", na=False), "TIPO_LAMPADA"] = "FLC"
-
+        # Se passou em tudo
         else:
-            st.warning("⚠️ A coluna 'tipo_lampada' não foi encontrada no arquivo!")
+            status = "OK"
+            observacao = "Conforme"
 
-        # =====================================
-        # 4) REGRA: medidor_nc ➜ medicao
-        # =====================================
-        if "MEDIDOR_NC" in df2.columns and "MEDICAO" in df2.columns:
+        resultados.append({
+            "linha_planilha": index + 2,
+            "medicao (N)": medicao,
+            "medidor_nc (O)": medidor_nc,
+            "tipo_lampada (Q)": tipo_lampada,
+            "status": status,
+            "observacao": observacao
+        })
 
-            df2.loc[df2["MEDIDOR_NC"] == "AGUARDANDO MEDICAO", "MEDICAO"] = "NAO"
+    resultado_df = pd.DataFrame(resultados)
 
-        else:
-            st.warning("⚠️ As colunas 'medidor_nc' ou 'medicao' não foram encontradas!")
+    # Salvar arquivo final
+    saida = "resultado_tratado.xlsx"
+    resultado_df.to_excel(saida, index=False)
 
-        # =====================================
-        # EXIBIR PRÉVIA
-        # =====================================
-        st.success("✅ Tratamento finalizado com sucesso!")
-
-        st.subheader("🔍 Prévia do arquivo tratado:")
-        st.dataframe(df2.head(50))
-
-        # =====================================
-        # DOWNLOAD
-        # =====================================
-        csv_buffer_2 = df2.to_csv(sep=";", index=False, encoding="latin1")
-
-        st.download_button(
-            label="📥 Baixar Modelo 2 tratado",
-            data=csv_buffer_2,
-            file_name="BASE_MODELO_2_TRATADA.csv",
-            mime="text/csv",
-            key="download2"
-        )
-
-    except Exception as e:
-        st.error(f"Erro ao processar a segunda base: {e}")
+    print("✅ Tratamento finalizado com sucesso!")
+    print(f"📁 Arquivo gerado: {saida}")
 
 
-st.markdown("---")
-st.caption("Sistema desenvolvido para a empresa EFICIENTE ⚡ Trabalhando de forma eficiente")
+# ========================
+# EXECUÇÃO
+# ========================
+
+caminho = input("Cole aqui o caminho do arquivo Excel: ")
+processar_planilha(caminho)
 
 
