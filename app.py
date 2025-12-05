@@ -1,193 +1,133 @@
 import streamlit as st
 import pandas as pd
-import os
-import base64
+import unicodedata
 
-# =====================================
-# CONFIGURAÇÃO DA PÁGINA
-# =====================================
-st.set_page_config(
-    page_title="Validador de Relatórios",
-    page_icon="⚡",
-    layout="centered"
+st.set_page_config(page_title="Sistema de Processamento - Eficiente", layout="wide")
+
+st.title("🔌 SISTEMA DE PROCESSAMENTO – EFICIENTE")
+
+# ---------------------------------------
+# FUNÇÃO: REMOVER ACENTOS
+# ---------------------------------------
+def remover_acentos(texto):
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', str(texto))
+        if unicodedata.category(c) != 'Mn'
+    )
+
+
+# =====================================================================
+# MODELO 1 – RELATÓRIO COMPARATIVO
+# =====================================================================
+
+st.markdown("---")
+st.header("📘 MODELO 1 – RELATÓRIO COMPARATIVO")
+
+st.info("Faça upload da base CSV para análise (Modelo 1).")
+
+uploaded_file_1 = st.file_uploader(
+    "Arraste aqui o arquivo RELATORIO.csv (Modelo 1)",
+    type=["csv"],
+    key="base1"
 )
 
-# =====================================
-# CARREGAR LOGO NO TOPO ESQUERDO (UM POUCO MAIS ABAIXO)
-# =====================================
-logo_path = "logo.png"
-
-if os.path.exists(logo_path):
-    with open(logo_path, "rb") as image_file:
-        encoded_logo = base64.b64encode(image_file.read()).decode()
-
-    st.markdown(
-        f"""
-        <style>
-            .logo-container {{
-                position: fixed;
-                top: 70px;   /* ↓ AQUI CONTROLA QUANTO DESCE */
-                left: 25px;
-                z-index: 9999;
-            }}
-
-            .logo-container img {{
-                width: 160px;
-            }}
-
-            .titulo {{
-                text-align: center;
-                font-size: 34px;
-                font-weight: bold;
-            }}
-
-            .subtitulo {{
-                text-align: center;
-                font-size: 18px;
-            }}
-
-            div.stButton > button:first-child {{
-                background-color: #003366;
-                color: white;
-                font-size: 18px;
-                border-radius: 10px;
-                width: 100%;
-            }}
-        </style>
-
-        <div class="logo-container">
-            <img src="data:image/png;base64,{encoded_logo}">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-else:
-    st.warning("⚠️ arquivo logo.png não encontrado")
-
-# Espaço para não conflitar com a logo
-st.markdown("<div style='margin-top:120px;'></div>", unsafe_allow_html=True)
-
-# =====================================
-# TÍTULOS CENTRALIZADOS
-# =====================================
-st.markdown("<div class='titulo'>COMPARATIVO EFICIENTE</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitulo'>Processamento Automático de Relatório</div>", unsafe_allow_html=True)
-
-st.info("Faça upload do arquivo `RELATORIO.csv` para aplicar as regras de negócio automaticamente.")
-
-# =====================================
-# UPLOAD DO ARQUIVO
-# =====================================
-uploaded_file = st.file_uploader("Arraste seu arquivo CSV aqui", type=["csv"])
-
-if uploaded_file is not None:
+if uploaded_file_1 is not None:
     try:
-        df = pd.read_csv(uploaded_file, sep=";", dtype=str, encoding="latin1").fillna("")
+        df1 = pd.read_csv(uploaded_file_1, sep=";", dtype=str, encoding="latin1").fillna("")
 
-        st.write("---")
-        st.write("🔍 **Arquivo carregado! Processando regras...**")
+        st.success("✅ Arquivo carregado com sucesso!")
 
-        # Normaliza nomes das colunas
-        df.columns = [c.strip() for c in df.columns]
+        st.subheader("🔎 Prévia dos dados:")
+        st.dataframe(df1.head(50))
 
-        # Garante colunas necessárias
-        expected_cols = [
-            "id_ponto","posicao","medicao","tipo_lampada","potencia",
-            "tipo_luminaria","tipo_rede","plaqueta",
-            "id_ponto_2","posicao_2","medicao_2","tipo_lampada_2",
-            "potencia_2","tipo_luminaria_2","tipo_rede_2","plaqueta_2"
-        ]
-
-        for c in expected_cols:
-            if c not in df.columns:
-                df[c] = ""
-
-        # Converte potência para número
-        for col in ["potencia", "potencia_2"]:
-            df[col] = (
-                df[col]
-                .astype(str)
-                .str.replace(",", ".", regex=False)
-                .str.strip()
-                .replace("", "0")
-            )
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-
-        # Normaliza texto
-        text_cols = [
-            "tipo_lampada","tipo_lampada_2","medicao","medicao_2",
-            "tipo_rede","tipo_rede_2","plaqueta","id_ponto","id_ponto_2"
-        ]
-
-        for c in text_cols:
-            df[c] = df[c].astype(str).str.strip()
-
-        # Inicia coluna resultado
-        df["resultado"] = ""
-
-        # REGRA 1 – REDUÇÃO DE POTÊNCIA
-        mask_reducao = (
-            df["tipo_lampada"].str.upper() == df["tipo_lampada_2"].str.upper()
-        ) & (df["potencia"] < df["potencia_2"])
-
-        df.loc[mask_reducao, "resultado"] += "REDUÇÃO DE POTENCIA; "
-
-        # REGRA 2 – POSSÍVEL MUDANÇA DE MEDIÇÃO
-        mask_medicao = (
-            df["medicao_2"].str.upper().str.contains("SIM", na=False)
-        ) & (
-            df["medicao"].str.upper().str.contains("NÃO|NAO", na=False)
-        )
-
-        df.loc[mask_medicao, "resultado"] += "POSSIVEL MUDANÇA DE MEDIÇÃO; "
-
-        # REGRA 3 – POSSÍVEL DUPLICIDADE
-        contagem = df.groupby("id_ponto_2")["id_ponto"].transform("nunique")
-        mask_dup = (contagem > 1) & (df["id_ponto_2"].str.strip() != "")
-
-        df.loc[mask_dup, "resultado"] += "POSSIVEL DUPLICIDADE; "
-
-        # REGRA 4 – MUDANÇA DE REDE
-        mask_rede = (
-            (df["tipo_rede"].str.upper() != df["tipo_rede_2"].str.upper())
-        ) & (df["tipo_rede_2"].str.strip() != "")
-
-        df.loc[mask_rede, "resultado"] += "MUDANÇA DE REDE; "
-
-        # REGRA 5 – PONTO NOVO
-        mask_novo = df["id_ponto_2"].str.strip() == ""
-        df.loc[mask_novo, "resultado"] += "PONTO NOVO; "
-
-        # REGRA 6 – PLAQUETA DUPLICADA
-        plaquetas = df.groupby("plaqueta")["id_ponto"].transform("nunique")
-        mask_plaq = (df["plaqueta"].str.strip() != "") & (plaquetas > 1)
-
-        df.loc[mask_plaq, "resultado"] += "PLAQUETA DUPLICADA; "
-
-        # Limpa resultado
-        df["resultado"] = (
-            df["resultado"]
-            .str.replace(r"\s*;\s*$", "", regex=True)
-            .str.replace(r"\s*;\s*", "; ", regex=True)
-            .str.strip()
-        )
-
-        # Exibe prévia
-        st.success("✅ Processamento concluído!")
-        st.subheader("Prévia dos itens com observações:")
-        st.dataframe(df[df['resultado'] != ""].head())
-
-        # Download
-        csv_buffer = df.to_csv(sep=";", index=False, encoding="latin1")
+        csv_buffer_1 = df1.to_csv(sep=";", index=False, encoding="latin1")
 
         st.download_button(
-            label="📥 BAIXAR RELATÓRIO CORRIGIDO",
-            data=csv_buffer,
-            file_name="RELATORIO_CORRIGIDO.csv",
-            mime="text/csv"
+            label="📥 Baixar Arquivo Modelo 1",
+            data=csv_buffer_1,
+            file_name="BASE_MODELO_1_PROCESSADA.csv",
+            mime="text/csv",
+            key="download1"
         )
 
     except Exception as e:
-        st.error(f"Erro ao processar o arquivo: {e}")
+        st.error(f"Erro ao processar a base 1: {e}")
+
+
+# =====================================================================
+# MODELO 2 – CONVERSÃO DE BASE
+# =====================================================================
+
+st.markdown("---")
+st.header("📙 MODELO 2 – PADRONIZAÇÃO DE BASE")
+
+st.info("Faça upload do arquivo CSV para aplicar as regras de padronização (colunas O, N e Q).")
+
+uploaded_file_2 = st.file_uploader(
+    "Arraste aqui o arquivo do Modelo 2 (Padronização)",
+    type=["csv"],
+    key="base2"
+)
+
+if uploaded_file_2 is not None:
+    try:
+        df2 = pd.read_csv(uploaded_file_2, sep=";", dtype=str, encoding="latin1").fillna("")
+
+        st.success("✅ Arquivo carregado. Iniciando tratamento...")
+
+        # =====================================
+        # 1) COLOCAR TUDO EM MAIÚSCULO
+        # =====================================
+        df2 = df2.applymap(lambda x: str(x).upper().strip())
+
+        # =====================================
+        # 2) REMOVER ACENTOS
+        # =====================================
+        df2 = df2.applymap(remover_acentos)
+
+        # =====================================
+        # 3) COLUNA Q – PADRONIZAÇÃO DAS LÂMPADAS
+        # =====================================
+        if "Q" in df2.columns:
+            df2["Q"] = df2["Q"].replace({
+                "LAMPADA LED": "LD",
+                "LAMPADA VAPOR DE SODIO": "VS",
+                "LAMPADA METALICA": "ME",
+                "LAMPADA FLUORESCENTES": "FLC"
+            })
+
+        # =====================================
+        # 4) REGRA: COLUNA O -> N
+        # =====================================
+        if "O" in df2.columns and "N" in df2.columns:
+            df2.loc[df2["O"] == "AGUARDANDO MEDICAO", "N"] = "NAO"
+
+        # =====================================
+        # EXIBIR PRÉVIA
+        # =====================================
+        st.success("✅ Tratamento finalizado com sucesso!")
+
+        st.subheader("🔍 Prévia do arquivo tratado:")
+        st.dataframe(df2.head(50))
+
+        # =====================================
+        # DOWNLOAD
+        # =====================================
+        csv_buffer_2 = df2.to_csv(sep=";", index=False, encoding="latin1")
+
+        st.download_button(
+            label="📥 Baixar Modelo 2 tratado",
+            data=csv_buffer_2,
+            file_name="BASE_MODELO_2_TRATADA.csv",
+            mime="text/csv",
+            key="download2"
+        )
+
+    except Exception as e:
+        st.error(f"Erro ao processar a segunda base: {e}")
+
+
+st.markdown("---")
+st.caption("Sistema desenvolvido para a empresa EFICIENTE ⚡ Trabalhando de forma eficiente")
 
 
