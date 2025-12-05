@@ -209,7 +209,7 @@ if uploaded_file2 is not None:
         if "tipo_lampada" in df2.columns:
             df2["tipo_lampada"] = df2["tipo_lampada"].replace({
                 "LAMPADA LED": "LD",
-                "LAMPADA VAPOR DE SODIO": "VS",
+                "LAMPADA VAPOR SODIO": "VS",
                 "LAMPADA METALICA": "ME",
                 "LAMPADA FLUORESCENTES": "FLC"
             })
