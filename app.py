@@ -92,10 +92,10 @@ if uploaded_file_2 is not None:
 
             df2["Q"] = df2["Q"].astype(str).str.strip()
 
-            df2.loc[df2["Q"].str.contains("LED", na=False), "Q"] = "LD"
-            df2.loc[df2["Q"].str.contains("VAPOR", na=False), "Q"] = "VS"
-            df2.loc[df2["Q"].str.contains("METAL", na=False), "Q"] = "ME"
-            df2.loc[df2["Q"].str.contains("FLUOR", na=False), "Q"] = "FLC"
+            df2.loc[df2["Q"].str.contains("LAMPADA LED", na=False), "Q"] = "LD"
+            df2.loc[df2["Q"].str.contains("LAMPADA VAPOR SODIO", na=False), "Q"] = "VS"
+            df2.loc[df2["Q"].str.contains("LAMPADA METALICA", na=False), "Q"] = "ME"
+            df2.loc[df2["Q"].str.contains("LAMPADA FLUORESCENTES", na=False), "Q"] = "FLC"
 
         # =====================================
         # 4) REGRA: COLUNA O -> N
