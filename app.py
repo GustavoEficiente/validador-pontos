@@ -3,7 +3,6 @@ import pandas as pd
 import unicodedata
 
 st.set_page_config(page_title="Sistema de Processamento - Eficiente", layout="wide")
-
 st.title("🔌 SISTEMA DE PROCESSAMENTO – EFICIENTE")
 
 # ---------------------------------------
@@ -61,7 +60,7 @@ if uploaded_file_1 is not None:
 st.markdown("---")
 st.header("📙 MODELO 2 – PADRONIZAÇÃO DE BASE")
 
-st.info("Faça upload do arquivo CSV para aplicar as regras de padronização (colunas O, N e Q).")
+st.info("Coluna Q ➜ tipo_lampada | Coluna O ➜ medidor_nc | Coluna N ➜ medicao")
 
 uploaded_file_2 = st.file_uploader(
     "Arraste aqui o arquivo do Modelo 2 (Padronização)",
@@ -86,22 +85,30 @@ if uploaded_file_2 is not None:
         df2 = df2.applymap(remover_acentos)
 
         # =====================================
-        # 3) COLUNA Q – PADRONIZAÇÃO DAS LÂMPADAS (VERSÃO FORTE)
+        # 3) PADRONIZAÇÃO DA COLUNA tipo_lampada
         # =====================================
-        if "Q" in df2.columns:
+        if "TIPO_LAMPADA" in df2.columns:
 
-            df2["Q"] = df2["Q"].astype(str).str.strip()
+            df2["TIPO_LAMPADA"] = df2["TIPO_LAMPADA"].astype(str).str.strip()
 
-            df2.loc[df2["Q"].str.contains("LAMPADA LED", na=False), "Q"] = "LD"
-            df2.loc[df2["Q"].str.contains("LAMPADA VAPOR SODIO", na=False), "Q"] = "VS"
-            df2.loc[df2["Q"].str.contains("LAMPADA METALICA", na=False), "Q"] = "ME"
-            df2.loc[df2["Q"].str.contains("LAMPADA FLUORESCENTES", na=False), "Q"] = "FLC"
+            df2.loc[df2["TIPO_LAMPADA"].str.contains("LED", na=False), "TIPO_LAMPADA"] = "LD"
+            df2.loc[df2["TIPO_LAMPADA"].str.contains("VAPOR", na=False), "TIPO_LAMPADA"] = "VS"
+            df2.loc[df2["TIPO_LAMPADA"].str.contains("SODIO", na=False), "TIPO_LAMPADA"] = "VS"
+            df2.loc[df2["TIPO_LAMPADA"].str.contains("METAL", na=False), "TIPO_LAMPADA"] = "ME"
+            df2.loc[df2["TIPO_LAMPADA"].str.contains("FLUOR", na=False), "TIPO_LAMPADA"] = "FLC"
+
+        else:
+            st.warning("⚠️ A coluna 'tipo_lampada' não foi encontrada no arquivo!")
 
         # =====================================
-        # 4) REGRA: COLUNA O -> N
+        # 4) REGRA: medidor_nc ➜ medicao
         # =====================================
-        if "O" in df2.columns and "N" in df2.columns:
-            df2.loc[df2["O"] == "AGUARDANDO MEDICAO", "N"] = "NAO"
+        if "MEDIDOR_NC" in df2.columns and "MEDICAO" in df2.columns:
+
+            df2.loc[df2["MEDIDOR_NC"] == "AGUARDANDO MEDICAO", "MEDICAO"] = "NAO"
+
+        else:
+            st.warning("⚠️ As colunas 'medidor_nc' ou 'medicao' não foram encontradas!")
 
         # =====================================
         # EXIBIR PRÉVIA
