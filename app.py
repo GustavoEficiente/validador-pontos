@@ -186,7 +186,7 @@ if uploaded_file is not None:
 # =====================================================================
 
 st.write("---")
-st.subheader("📂 Upload - Modelo Alternativo (Padronização de Base)")
+st.subheader("📂 Upload - Padronização de Base")
 
 uploaded_file2 = st.file_uploader(
     "Arraste o SEGUNDO modelo de base aqui",
