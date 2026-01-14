@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 import os
 import base64
@@ -123,6 +123,18 @@ if uploaded_file is not None:
         ) & (df["potencia"] < df["potencia_2"])
         df.loc[mask_reducao, "resultado"] += "REDUÇÃO DE POTENCIA; "
 
+        # =====================================================
+        # ✅ NOVA REGRA: MUDANÇA DE TIPO DE LÂMPADA
+        # Compara tipo_lampada (censo atual) vs tipo_lampada_2 (censo anterior)
+        # Ignora linhas onde id_ponto_2 está vazio (ponto novo) e onde tipo_lampada_2 está vazio
+        # =====================================================
+        mask_tipo_lampada = (
+            (df["id_ponto_2"].str.strip() != "") &
+            (df["tipo_lampada_2"].str.strip() != "") &
+            (df["tipo_lampada"].str.upper() != df["tipo_lampada_2"].str.upper())
+        )
+        df.loc[mask_tipo_lampada, "resultado"] += "HOUVE ALTERAÇÃO DE TIPO DE LAMPADA; "
+
         mask_medicao = (
             df["medicao_2"].str.upper().str.contains("SIM", na=False)
         ) & (
@@ -168,7 +180,6 @@ if uploaded_file is not None:
 
     except Exception as e:
         st.error(f"Erro ao processar o arquivo: {e}")
-
 
 # =====================================================================
 # ✅✅✅ SEGUNDO UPLOAD - MODELO DIFERENTE (QUE VOCÊ PEDIU)
