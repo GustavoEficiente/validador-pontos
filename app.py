@@ -69,7 +69,7 @@ st.markdown("<div style='margin-top:120px;'></div>", unsafe_allow_html=True)
 # =====================================
 st.markdown("<div class='titulo'>COMPARATIVO EFICIENTE</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtitulo'>Processamento Automático de Relatório</div>", unsafe_allow_html=True)
-
+st.subheader("📂 Upload - Comparativo de Bases")
 st.info("Faça upload do arquivo RELATORIO.csv para aplicar as regras de negócio automaticamente.")
 
 
